@@ -15,6 +15,8 @@ constexpr std::uintptr_t cheat_main = cheat_base + 0x00621E42;
 uintptr_t bad_menu_addr = 0;
 uintptr_t good_menu_addr = 0;
 uintptr_t menu_ret = cheat_base + 0x1E1ABC;
+uintptr_t key = 0;
+uintptr_t fs_value = 0;
 
 void* original_shit = nullptr;
 uintptr_t pushinb = cheat_base + 0x008B6640;
