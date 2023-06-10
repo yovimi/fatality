@@ -1,4 +1,4 @@
-﻿#include "fatality.h"
+#include "fatality.h"
 #include "font.h"
 #include <format>
 
@@ -116,6 +116,30 @@ int xor_hook()
     return 0;
 }
 
+void* original_get_shit = nullptr;
+
+DWORD __fastcall hk_get_shit(int a1, int prm, int a3)
+{
+    for (const auto& offsets : g_offsets)
+    {
+        if (offsets.parametr == prm)
+        {
+            *reinterpret_cast<uintptr_t*>(offsets.rva + cheat_base) = key ^ fs_value ^ offsets.xor2 ^ offsets.result;
+            //printf("[DEBUG] Replaced 0x%X (0x%X) [FS] 0x%X [KEY] 0x%X\n", offsets.rva + cheat_base, prm, fs_value, key);
+        }
+    }
+
+    __asm
+    { 
+        pop edi
+        pop esi
+        mov eax, 0x1337
+        ret 0x0
+    };
+
+    return 0;
+}
+
 void* original_dll_main = nullptr;
 
 BOOL __stdcall hk_dll_main(HMODULE mod, DWORD res, LPVOID reserve)
@@ -189,15 +213,16 @@ BOOL __stdcall hk_dll_main(HMODULE mod, DWORD res, LPVOID reserve)
 
     printf(sk("[  t.me/yowablog  ] [ INFO ] Init shit...\n"));
 
-    auto key = *reinterpret_cast<uintptr_t*>(cheat_base + 0x0078629C);
+    key = *reinterpret_cast<uintptr_t*>(cheat_base + 0x0078629C);
+    fs_value = __readfsdword(0x20);
 
-    for (const auto& offsets : g_offsets)
+    /*for (const auto& offsets : g_offsets)
     {
         uintptr_t fs_value = __readfsdword(0x20);
         *reinterpret_cast<uintptr_t*>(offsets.rva + cheat_base) = key ^ fs_value ^ offsets.xor2 ^ offsets.result;
-    }
+    }*/
 
-    *reinterpret_cast<uintptr_t*>(cheat_base + 0x8CDA40) = reinterpret_cast<uintptr_t>(GetModuleHandleA(sk("client.dll"))) + 0x3DCF30; // fix mask changer IDA( 55 8B EC 83 EC 18 53 8B D9 8D 45 04 8B 08 56 57 8B B3 ?? ?? ?? ?? 89 5D F8 E8 ?? ?? ?? ?? 8B 3D ?? ?? ?? ?? B9 02 00 00 00 E8 ?? ?? ?? ?? 8B 8B ?? ?? ?? ?? 83 F9 FF 0F 84 ?? ?? ?? ?? 0F B7 C1 )
+    *reinterpret_cast<uintptr_t*>(cheat_base + 0x8CDA40) = reinterpret_cast<uintptr_t>(GetModuleHandleA(sk("client.dll"))) + 0x3DDCD0; // fix mask changer IDA( 55 8B EC 83 EC 18 53 8B D9 8D 45 04 8B 08 56 57 8B B3 ?? ?? ?? ?? 89 5D F8 E8 ?? ?? ?? ?? 8B 3D ?? ?? ?? ?? B9 02 00 00 00 E8 ?? ?? ?? ?? 8B 8B ?? ?? ?? ?? 83 F9 FF 0F 84 ?? ?? ?? ?? 0F B7 C1 )
 
     ((void(*)())(cheat_base + 0x923810))(); // i forgot, mb chams
     ((void(*)())(cheat_base + 0x915000))();
@@ -252,7 +277,7 @@ BOOL __stdcall hk_dll_main(HMODULE mod, DWORD res, LPVOID reserve)
 
     printf(sk("[  t.me/yowablog  ] [ INFO ] Created %d hooks\n"), total_hooks);
 
-    memcpy((void*)(cheat_base + 0x29C5D5), "\xBE\x40\xA4\x19\x00\x90", 0x6);
+    //memcpy((void*)(cheat_base + 0x29C5D5), "\xBE\x40\xA4\x19\x00\x90", 0x6);
     memcpy((void*)(cheat_base + 0x8B91E0), "\x50\x01\x00\x00", 0x4);
 
     LPVOID menu_table = VirtualAlloc(0, 0x1000, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE);
@@ -331,7 +356,7 @@ void fatality_t::setup_hooks()
     if (MH_CreateHook(reinterpret_cast<void*>(cheat_base + 0x0054FDD0), xor_hook, &original_xor_hook) != MH_OK)
         printf(sk("[  t.me/yowablog  ] [ HOOK ] Failed hook 2!\n"));
 
-    if (MH_CreateHook(reinterpret_cast<void*>(cheat_base + 0x00550040), xor_hook, &original_xor_hook) != MH_OK)
+    if (MH_CreateHook(reinterpret_cast<void*>(cheat_base + 0x00550040), hk_get_shit, &original_get_shit) != MH_OK)
         printf(sk("[  t.me/yowablog  ] [ HOOK ] Failed hook 3!\n"));
 
     if (MH_CreateHook(reinterpret_cast<void*>(cheat_base + 0x001E1AB5), fix_menu_hook, &original_fix_menu_hook) != MH_OK)
@@ -360,6 +385,14 @@ void fatality_t::patches()
 
     // fix VM pizdec =)))
     memset((void*)(cheat_base + 0x1A2854), 0x90, 0x23c);
+    //memset((void*)(cheat_base + 0x55009C), 0x90, 0x75d);
+
+    // fix skin changer
+    //LPVOID mem_alloc = VirtualAlloc(0, 0x1000, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+    //memcpy(mem_alloc, "\x02\x00\x00\x00\x08\x4F\x60\x4C\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xFF\xFF\xFF\xFF\x00\x00\x00\x00\xD8\x4E\x60\x4C\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 0x40);
+    //*reinterpret_cast<uintptr_t*>((uintptr_t)mem_alloc + 0x4) = cheat_base + 0x644F08;
+    //*reinterpret_cast<uintptr_t*>((uintptr_t)mem_alloc + 0x30) = cheat_base + 0x644ED8;
+    //*reinterpret_cast<uintptr_t*>(cheat_base + 0x8B71B4) = reinterpret_cast<uintptr_t>(mem_alloc);
 }
 
 void fatality_t::entry()
@@ -400,4 +433,3 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
 
     return 1;
 }
-
