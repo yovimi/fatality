@@ -231,7 +231,7 @@ BOOL __stdcall hk_dll_main(HMODULE mod, DWORD res, LPVOID reserve)
     _asm { mov ecx, lol };
     ((void(*)())(cheat_base + 0x915470))();  // init threads
 
-     ((void(*)())(cheat_base + 0x9339B0))(); // init event manager
+    ((void(*)())(cheat_base + 0x9339B0))(); // init event manager
 
     //((void(*)())(cheat_base + 0x120460))();  // init kit parser
 
